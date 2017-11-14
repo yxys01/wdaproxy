@@ -78,10 +78,6 @@
     height: 100%;
   }
   
-  .cursor-pointer {
-    cursor: pointer;
-  }
-  
   video::-webkit-media-controls-panel {
     /* always show video controls */
     display: flex !important;
@@ -100,7 +96,7 @@
         </div>
       </div>
       <div class="col-sm-6">
-        <h3>{{device.name}}</h3>
+        <h3>iPhone 7 Plus</h3>
         <hr>
         <div class="panel panel-default">
           <div class="panel-heading">
@@ -109,23 +105,20 @@
           <table class="table">
             <tbody>
               <tr>
-                <td>UDID</td>
-                <td v-text="device.udid"></td>
-              </tr>
-              <tr>
                 <td>ScreenSize</td>
                 <td><span v-text="display.width"></span>x<span v-text="display.height"></span></td>
               </tr>
               <tr>
                 <td>SessionId</td>
-                <td>
-                  <span v-text="sessionId"></span>
-                  <span @click="refreshSessionId" class="glyphicon glyphicon-refresh cursor-pointer"></span>
-                </td>
+                <td><span v-text="sessionId"></span></td>
               </tr>
               <tr>
                 <td>RefreshCount</td>
                 <td><span v-text="refreshCount"></span></td>
+              </tr>
+              <tr>
+                <td>Current</td>
+                <td>{{current.toFixed(3)}} mA</td>
               </tr>
             </tbody>
           </table>
@@ -140,7 +133,6 @@
             <input type="text" class="form-control" v-model="inputText" placeholder="Input text ..." @keyup.enter="sendText(inputText+'\n')">
             <span class="input-group-btn">
               <button class="btn btn-default" type="button" @click="sendText(inputText)">SendText</button>
-              <button class="btn btn-default" type="button" @click="clearText(30)">Clear</button>
             </span>
           </div>
         </div>
@@ -266,9 +258,6 @@
       el: "#app",
       // delimiters: ["[[", "]]"],
       data: {
-        device: {
-          name: '',
-        },
         display: {
           width: 0,
           height: 0,
@@ -278,6 +267,7 @@
         refreshCount: 0,
         sessionId: null,
         pageHidden: false,
+        current: 0,
         inputText: '',
         wsAdmin: null,
         record: {
@@ -314,6 +304,7 @@
         this.refreshScreen();
         this.initTouchListener();
         this.initScreenSize();
+        this.initWebSocket();
         var self = this;
         $("#screen")[0].onload = function(e) {
           var nw = e.target.naturalWidth;
@@ -327,14 +318,6 @@
         }.bind(this);
       },
       methods: {
-        refreshSessionId: function() {
-          $.ajax({
-              url: "/status",
-            })
-            .then(function(ret) {
-              this.sessionId = ret.sessionId;
-            }.bind(this))
-        },
         toggleRecord: function() {
           var self = this;
           if (!this.record.running) {
@@ -382,6 +365,18 @@
           video.load();
           video.play();
         },
+        initWebSocket: function() {
+          this.wsAdmin = new WebSocket(location.protocol.replace("http", "ws") + "//" + location.host + "/ws/admin");
+          this.wsAdmin.onmessage = function(evt) {
+            this.current = parseFloat(evt.data);
+          }.bind(this)
+          this.wsAdmin.onopen = function() {
+            // this.wsAdmin.send("current-on");
+          }.bind(this)
+          this.wsAdmin.onclose = function() {
+            console.log("Connection is closed")
+          }
+        },
         tap: function(x, y) {
           var self = this;
           return $.ajax({
@@ -427,7 +422,7 @@
               fromY: fromY,
               toX: toX,
               toY: toY,
-              duration: 0,
+              duration: 0.2,
             })
           })
         },
@@ -439,9 +434,6 @@
             .then(function(ret) {
               console.log(ret);
             })
-        },
-        clearText: function(n) {
-          this.sendText("\b".repeat(n || 30))
         },
         sendText: function(text) {
           return $.ajax({
@@ -479,7 +471,6 @@
             })
             .then(function(ret) {
               this.sessionId = ret.sessionId;
-              Object.assign(this.device, ret.value.device);
               return $.ajax({
                 url: "/session/" + ret.sessionId + "/window/size",
               })

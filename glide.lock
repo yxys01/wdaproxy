@@ -1,5 +1,5 @@
 hash: eae01b2276296447cbd7e12179d76c0f49e7430a44865f50d63b01260d499017
-updated: 2017-04-07T17:22:16.746702043+08:00
+updated: 2017-08-30T15:39:27.792482187+08:00
 imports:
 - name: github.com/codeskyblue/muuid
   version: 44f8dfd4b3a966e347fe17845ccdc0ba16218b5c
@@ -13,6 +13,10 @@ imports:
   version: 599cba5e7b6137d46ddf58fb1765f5d928e69604
 - name: github.com/gorilla/websocket
   version: a91eba7f97777409bc2c443f5534d41dd20c5720
+- name: github.com/jacobsa/go-serial
+  version: 30e16169a71e9998d4d6932c4971d85357263c00
+  subpackages:
+  - serial
 - name: github.com/mash/go-accesslog
   version: 9ba8e13f36087d6cb83d9a9f17f9e8da137d5ee9
 - name: github.com/ogier/pflag

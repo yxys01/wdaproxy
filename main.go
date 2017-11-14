@@ -37,7 +37,6 @@ var (
 	debug          bool
 
 	rt = mux.NewRouter()
-	udidNames = map[string]string{}
 )
 
 type statusResp struct {
@@ -144,16 +143,10 @@ func main() {
 		}
 		errC <- c.Run()
 	}()
-	go func(udid string) {
+	go func() {
 		if pWda == "" {
 			return
 		}
-		// device name
-		nameBytes, _ := exec.Command("idevicename", "-u", udid).Output()
-		deviceName := strings.TrimSpace(string(nameBytes))
-		udidNames[udid] = deviceName
-		log.Printf("device name: %s", deviceName)
-
 		log.Printf("launch WebDriverAgent(dir=%s)", pWda)
 		c := exec.Command("xcodebuild",
 			"-verbose",
@@ -176,29 +169,22 @@ func main() {
 		if err = c.Start(); err != nil {
 			log.Fatal(err)
 		}
-
-		// close writers when xcodebuild exit
-		go func() {
-			c.Wait()
-			writer.Close()
-		}()
-
 		lineStr := ""
 		for {
 			line, isPrefix, err := bufrd.ReadLine()
+			if err != nil {
+				log.Fatal("[WDA] exit", err)
+			}
+
 			if isPrefix {
 				lineStr = lineStr + string(line)
 				continue
 			} else {
 				lineStr = string(line)
 			}
-			lineStr = strings.TrimSpace(string(line))
-
+			lineStr := strings.TrimSpace(string(line))
 			if debug {
 				fmt.Printf("[WDA] %s\n", lineStr)
-			}
-			if err != nil {
-				log.Fatal("[WDA] exit", err)
 			}
 			if strings.Contains(lineStr, "Successfully wrote Manifest cache to") {
 				log.Println("[WDA] test ipa successfully generated")
@@ -208,7 +194,7 @@ func main() {
 			}
 			lineStr = "" // reset str
 		}
-	}(udid)
+	}()
 
 	log.Printf("Open webbrower with http://%s:%d", LocalIP(), lisPort)
 	log.Fatal(<-errC)
